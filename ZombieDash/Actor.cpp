@@ -7,18 +7,23 @@
 ////////////////////////////////////////////////////////////////
 //ACTOR
 ////////////////////////////////////////////////////////////////
-Actor::Actor(int ImageID, int x, int y, Direction dir = right, int depth = 0)
-	:GraphObject(ImageID, x, y, dir, depth)
+Actor::Actor(int ImageID, int x, int y, StudentWorld* world, Direction dir = right, int depth = 0)
+	:GraphObject(ImageID, x, y, dir, depth), m_alive(true)
 {
-	
+	m_world = world;
+}
+
+bool Actor::isOverlapping(int x, int y) //Checks to see if the specified coordinates are overlapping with this actor
+{
+	return false; //Not implemented yet
 }
 
 Actor::~Actor()
-{
+{ 
 	//Nothing yet
 }
 
-bool Actor::insideBoundingBox(int x, int y)
+bool Actor::insideBoundingBox(int x, int y) //Checks to see if the coordinate x,y is inside the actor's bounding box
 {
 	int boxX = Actor::getX();
 	int boxY = Actor::getY();
@@ -26,48 +31,130 @@ bool Actor::insideBoundingBox(int x, int y)
 		return true;
 	else return false;
 }
+
+bool Actor::isAlive() //checks to see if the actor is alive
+{
+	return m_alive;
+}
+
+StudentWorld* Actor::world()
+{
+	return m_world;
+}
+
 //////////////////////////////////////////////////////////////////
 //WALL
 //////////////////////////////////////////////////////////////////
-Wall::Wall(int x, int y)
-	:Actor(IID_WALL, x, y, right, 0)
-{
-	//Pass stuff on to actor
+Wall::Wall(int x, int y, StudentWorld* world)
+	:Static(IID_WALL, x, y, world)
+{ 
+	
 }
 
 void Wall::doSomething()
 {
-	//will probably never do anything
+	//will never do anything
 }
 
+bool Wall::insideBoundingBox(int x, int y)
+{
+	return Actor::insideBoundingBox(x, y);
+}
 
+Wall::~Wall()
+{
+}
+
+//////////////////////////////////////////////////////////////////
+//Static
+//////////////////////////////////////////////////////////////////
+Static::Static(int imageID, int x, int y, StudentWorld * world, Direction dir, int depth)
+	:Actor(imageID, x, y, world, dir, depth)
+{
+}
+
+bool Static::insideBoundingBox(int x, int y) //Most Static objects don't have collision boxes
+{
+	return false;
+}
+
+void Static::tryMoving(const Direction dir, int dist = 0)
+{
+	return;
+}
 //////////////////////////////////////////////////////////////////
 //BEING
 //////////////////////////////////////////////////////////////////
-Being::Being(int imageID, int x, int y, Direction dir = right, int depth = 0)
-	:Actor(imageID, x, y, dir, depth)
+Being::Being(int imageID, int x, int y, StudentWorld* world)
+	:Actor(imageID, x, y, world)
 {
-	m_alive = true;
 }
 
-bool Being::isAlive()
+Being::~Being()
 {
-	return m_alive;
+}
+
+void Being::tryMoving(const Direction dir, int dist)
+{
+	if (!(Being::getDirection() == dir))
+		Being::setDirection(dir);
+	int destx = Being::getX();
+	int desty = Being::getY();
+	switch (dir)
+	{
+	case left:
+		destx -= dist;
+		break;
+	case right:
+		destx += dist;
+		break;
+	case up:
+		desty += dist;
+		break;
+	case down:
+		desty -= dist;
+		break;
+	}
+	if (!(Being::world()->collision(destx, desty)))
+		Being::moveTo(destx, desty);
+}
+
+//////////////////////////////////////////////////////////////////
+//Human
+//////////////////////////////////////////////////////////////////
+Human::Human(int imageID, int x, int y, StudentWorld* world)
+	:Being(imageID, x, y, world)
+{
+
+}
+
+Human::~Human()
+{
+}
+
+void Human::tryMoving(const Direction dir, int dist = 2)
+{
+	Being::tryMoving(dir, dist);
 }
 
 //////////////////////////////////////////////////////////////////
 //Pene
 //////////////////////////////////////////////////////////////////
 Penelope::Penelope(int startX, int startY, StudentWorld *world)
-	:Being(IID_PLAYER, startX, startY), m_world(world)
+	:Human(IID_PLAYER, startX, startY, world)
 {
 
 }
 
 Penelope::~Penelope()
 {
-	delete m_world;
 }
+
+void Penelope::tryMoving(const Direction dir, int dist = 4)
+{
+	Being::tryMoving(dir, dist);
+}
+
 
 void Penelope::doSomething()
 {
@@ -75,37 +162,21 @@ void Penelope::doSomething()
 	int destX = Penelope::getX();
 	int destY = Penelope::getY();
 	int key;
-	if (m_world->getKey(key))
+	if (world()->getKey(key)) //add accessor for world
 	{
 		switch (key)
 		{
 		case KEY_PRESS_LEFT:
-			if (!(Penelope::getDirection() == left))
-				Penelope::setDirection(left);
-			destX -= 4;
-			if (!m_world->collision(destX, destY))
-				Penelope::moveTo(destX, destY);
+			tryMoving(left);
 			break;
 		case KEY_PRESS_RIGHT:
-			if (!(Penelope::getDirection() == right))
-				Penelope::setDirection(right);
-			destX += 4;
-			if (!m_world->collision(destX, destY))
-				Penelope::moveTo(destX, destY);
+			tryMoving(right);
 			break;
 		case KEY_PRESS_UP:
-			if (!(Penelope::getDirection() == up))
-				Penelope::setDirection(up);
-			destY += 4;
-			if (!m_world->collision(destX, destY))
-				Penelope::moveTo(destX, destY);
+			tryMoving(up);
 			break;
 		case KEY_PRESS_DOWN:
-			if (!(Penelope::getDirection() == down))
-				Penelope::setDirection(down);
-			destY -= 4; 
-			if (!m_world->collision(destX, destY))
-				Penelope::moveTo(destX, destY);
+			tryMoving(down);
 			break;
 		}
 	}
@@ -113,4 +184,5 @@ void Penelope::doSomething()
 	return; //Page 27
 	//Make penelope move when keys are pressed
 }
+
 

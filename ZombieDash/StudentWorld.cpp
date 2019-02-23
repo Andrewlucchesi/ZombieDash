@@ -64,11 +64,11 @@ int StudentWorld::init()
 			case Level::empty: break;
 
 			case Level::player: 
-				m_player = new Penelope(x*16, y*16, this);
+				m_player = new Penelope(x*SPRITE_WIDTH, y*SPRITE_HEIGHT, this);
 				break;
 
 			case Level::wall: 
-				Actor* wall = new Wall(x*SPRITE_WIDTH, y*SPRITE_HEIGHT);
+				Actor* wall = new Wall(x*SPRITE_WIDTH, y*SPRITE_HEIGHT, this);
 				m_actors.push_back(wall);
 				break;
 			}
