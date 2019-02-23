@@ -14,7 +14,10 @@ public:
 	virtual void tryMoving(int dir, int dist) = 0;
 	bool isAlive();
 	//virtual void burn() = 0;
-	//virtual void infect() = 0;
+	//virtual void infect(); //Default for infect function will be to do nothing. Only humans can be infected
+	//virtual void die();
+
+	//virtual void escape(); //will be called whenever an actor is overlapping with the exit. Only humans effected
 	StudentWorld* world();
 	virtual void doSomething() = 0;
 	virtual ~Actor();
@@ -23,25 +26,66 @@ private:
 	StudentWorld* m_world;
 };
 
-class Static :public Actor
+class StaticActor :public Actor
 {
 public:
-	Static(int imageID, int x, int y, StudentWorld* world, Direction dir = right, int depth = 0);
+	StaticActor(int imageID, int x, int y, StudentWorld* world, Direction dir = right, int depth = 0);
 	virtual bool insideBoundingBox(int x, int y); //Redefine so bounding box checks always return false
 	virtual void tryMoving( Direction dir, int dist);
+	//virtual void burn(); //The default for Static is to not burn(flames, vomit, pits dont burn)
+	virtual ~StaticActor();
 private:
 };
 
-//class vomit
-//class pit
-//class mine
+class Flame : public StaticActor
+{
+public:
+private:
+};
 
-//class goodie
-//class vaccine goodie
-//class mine goodie
-//class gas goodie
+class Vomit:public StaticActor
+{
+public:
+private:
+};
 
-class Wall : public Static
+class pit :public StaticActor
+{
+public:
+private:
+};
+
+class Landmine: public StaticActor
+{
+public:
+private:
+};
+
+class Goodie : public StaticActor
+{
+public:
+private:
+};
+
+class VaccineGoodie :public StaticActor
+{
+public:
+private:
+};
+
+class LandmineGoodie :public StaticActor
+{
+public:
+private:
+};
+
+class GasGoodie :public StaticActor
+{
+public:
+private:
+};
+
+class Wall : public StaticActor
 {
 public:
 	Wall(int x, int y, StudentWorld* world);
@@ -55,6 +99,7 @@ class Being : public Actor
 {
 public: Being(int imageID, int x, int y, StudentWorld* world);
 	//	virtual void kill();
+	//  virtual void burn(); // all beings are burned the same way, call the kill function
 		virtual void tryMoving( Direction dir, int dist);
 		virtual ~Being();
 private:
@@ -65,8 +110,9 @@ class Human : public Being
 public:Human(int imageID, int x, int y, StudentWorld* world);
 	   virtual ~Human();
 	   void tryMoving( Direction dir, int dist);
-	   //escape function
-	   //Become infected
+	   //virtual void escape();
+	   //virtual void infect(); //Allow for humans to be infected. Will set infection count to one, which will begin counting
+	   
 private:
 	//infection variable
 };
@@ -77,18 +123,41 @@ class Penelope : public Human
 public:
 	Penelope(int startX, int startY, StudentWorld *world);
 	void tryMoving( Direction dir, int dist);
+	virtual void kill();
 	virtual void doSomething();
 	virtual ~Penelope();
 private:
 	//Will have mines, flames, vaccines later
 };
 
-//class citizen
+class Citizen : public Human
+{
+public:
+Citizen(int x, int y, StudentWorld* world);
+virtual void doSomething();
+virtual void tryMoving(Direction dir, int dist);
+virtual void kill();
+virtual	~Citizen();
 
+private:
+};
 
-//class zombie
-//class dumb zombie
-//class smart zombie
+class Zombie : public Being
+{
+public:
+private:
+};
 
+class DumbZombie : public Zombie
+{
+public:
+private:
+};
+
+class SmartZombie : public Zombie
+{
+public:
+private:
+};
 
 #endif // ACTOR_H_

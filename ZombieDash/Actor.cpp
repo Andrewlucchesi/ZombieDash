@@ -46,7 +46,7 @@ StudentWorld* Actor::world()
 //WALL
 //////////////////////////////////////////////////////////////////
 Wall::Wall(int x, int y, StudentWorld* world)
-	:Static(IID_WALL, x, y, world)
+	:StaticActor(IID_WALL, x, y, world)
 { 
 	
 }
@@ -68,19 +68,24 @@ Wall::~Wall()
 //////////////////////////////////////////////////////////////////
 //Static
 //////////////////////////////////////////////////////////////////
-Static::Static(int imageID, int x, int y, StudentWorld * world, Direction dir, int depth)
+StaticActor::StaticActor(int imageID, int x, int y, StudentWorld * world, Direction dir, int depth)
 	:Actor(imageID, x, y, world, dir, depth)
 {
 }
 
-bool Static::insideBoundingBox(int x, int y) //Most Static objects don't have collision boxes
+bool StaticActor::insideBoundingBox(int x, int y) //Most Static objects don't have collision boxes
 {
 	return false;
 }
 
-void Static::tryMoving(const Direction dir, int dist = 0)
+void StaticActor::tryMoving(const Direction dir, int dist = 0)
 {
 	return;
+}
+
+StaticActor::~StaticActor()
+{
+
 }
 //////////////////////////////////////////////////////////////////
 //BEING
@@ -155,6 +160,11 @@ void Penelope::tryMoving(const Direction dir, int dist = 4)
 	Being::tryMoving(dir, dist);
 }
 
+void Penelope::kill() //This function will be called when Penelope is killed
+{
+	return; //need to edit
+}
+
 
 void Penelope::doSomething()
 {
@@ -185,4 +195,31 @@ void Penelope::doSomething()
 	//Make penelope move when keys are pressed
 }
 
+//////////////////////////////////////////////////////////////////
+//Citizen
+//////////////////////////////////////////////////////////////////
 
+Citizen::Citizen(int x, int y, StudentWorld * world)
+	:Human(IID_CITIZEN, x, y, world)
+{
+}
+
+void Citizen::doSomething()
+{
+	return; //for now, do nothing
+}
+
+void Citizen::tryMoving(Direction dir, int dist = 2)
+{
+	Being::tryMoving(dir, dist);
+}
+
+void Citizen::kill()
+{
+	//kill the citizen
+}
+
+Citizen::~Citizen()
+{
+
+}
