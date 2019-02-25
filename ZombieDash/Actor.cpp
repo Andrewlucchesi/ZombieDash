@@ -18,6 +18,7 @@ Actor::~Actor()
 	//Nothing yet
 }
 
+bool Actor::isOverlapping(int x, int y) //Returns true if the given coordinate is within 10 pixels of the center of this actor
 {
 	double deltaX = (getX() - x);
 	double deltaY = (getY() - y);
@@ -196,7 +197,7 @@ void Being::tryMoving(const Direction dir)
 //Human
 //////////////////////////////////////////////////////////////////
 Human::Human(int imageID, int x, int y, StudentWorld* world)
-	:Being(imageID, x, y, world)
+	:Being(imageID, x, y, world), m_infectCount(0)
 {
 
 }
@@ -205,11 +206,16 @@ Human::~Human()
 {
 }
 
+int Human::getInfect()
+{
+	return m_infectCount;
+}
+
 //////////////////////////////////////////////////////////////////
 //Pene
 //////////////////////////////////////////////////////////////////
 Penelope::Penelope(int startX, int startY, StudentWorld *world)
-	:Human(IID_PLAYER, startX, startY, world)
+	:Human(IID_PLAYER, startX, startY, world), m_mines(0), m_flames(0), m_vaccines(0)
 {
 
 }
@@ -231,6 +237,21 @@ void Penelope::kill() //This function will be called when Penelope is killed
 int Penelope::howFarDoIMove()
 {
 	return(4); //Penelope moves 4 pixels
+}
+
+int Penelope::getMines()
+{
+	return m_mines;
+}
+
+int Penelope::getFlames()
+{
+	return m_flames;
+}
+
+int Penelope::getVaccines()
+{
+	return m_vaccines;
 }
 
 void Penelope::doSomething()

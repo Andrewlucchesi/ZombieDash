@@ -6,6 +6,7 @@
 #include <sstream>
 #include <string>
 #include <list>
+#include <iomanip>
 using namespace std;
 
 GameWorld* createStudentWorld(string assetPath)
@@ -35,7 +36,6 @@ int StudentWorld::init()
 	}
 	oss << levNum << ".txt";
 	string levText = oss.str();
-	
 	Level::LoadResult result = lev.loadLevel(levText);
 	if (levNum > 99 || result == Level::load_fail_file_not_found)
 	{
@@ -95,11 +95,27 @@ int StudentWorld::move()
 		(*It)->doSomething();
 	}
 	m_player->doSomething();
+	
+
+
+	//Update GameStatText
+	ostringstream oss;
+	oss.setf(ios::fixed);
+	oss << "Score: ";
+	oss << setfill('0') << setw(6) << getScore();
+	oss << "  Level: ";
+	oss << setfill('0') << setw(2) << getLevel();
+	oss << "  Lives: " << getLives();
+	oss << "  Vaccines: " << m_player->getVaccines() <<"  Flames: " << m_player->getFlames() << "  Mines: " << m_player->getMines() << "  Infected: " << m_player->getInfect();
+	
+	setGameStatText(oss.str());
+
+//Check for exit conditions
 	if (m_isLevelFinished && m_player->isAlive()) //If player has exited, the code will move on to next level 
 	{
 		return GWSTATUS_FINISHED_LEVEL;
 	}
-	else if (m_player->isAlive()) 
+	else if (m_player->isAlive())
 	{
 		return GWSTATUS_CONTINUE_GAME;
 	}
@@ -109,7 +125,6 @@ int StudentWorld::move()
 		return GWSTATUS_PLAYER_DIED;
 	}
 	//else deal with death later
-
 }
 
 bool StudentWorld::collision(int destX, int destY) //Check to see if the given point is inside of any Actors

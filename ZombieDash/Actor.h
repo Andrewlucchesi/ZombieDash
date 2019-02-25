@@ -127,12 +127,13 @@ class Human : public Being
 {
 public:Human(int imageID, int x, int y, StudentWorld* world);
 	   virtual ~Human();
+	   int getInfect();
 	   //virtual void escape();
 	   //virtual void infect(); //Allow for humans to be infected. Will set infection count to one, which will begin counting
 	   //virtual bool tryToEscape(); //Try to escape. Pene can only escape if there are no citizens
 	   
 private:
-	//infection variable
+	int m_infectCount;
 };
 
 
@@ -145,7 +146,14 @@ public:
 	virtual void doSomething();
 	virtual bool tryToEscape(); 
 	virtual ~Penelope();
+	int getMines();
+	int getFlames();
+	int getVaccines();
 private:
+	int m_mines;
+	int m_flames;
+	int m_vaccines;
+	
 	//Will have mines, flames, vaccines later
 };
 
