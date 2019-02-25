@@ -54,11 +54,14 @@ int StudentWorld::init()
 	}
 	
 	//Initialization step
+	m_citizenCount = 0;
+	m_isLevelFinished = false;
 	for (int y = 0; y < 16; y++)
 	{
 		for (int x = 0; x < 16; x++)
 		{
 			Level::MazeEntry i = lev.getContentsOf(x, y);
+			Actor* entry;
 			switch (i)
 			{
 			case Level::empty: break;
@@ -68,8 +71,13 @@ int StudentWorld::init()
 				break;
 
 			case Level::wall: 
-				Actor* wall = new Wall(x*SPRITE_WIDTH, y*SPRITE_HEIGHT, this);
-				m_actors.push_back(wall);
+				entry = new Wall(x*SPRITE_WIDTH, y*SPRITE_HEIGHT, this);
+				m_actors.push_back(entry);
+				break;
+
+			case Level::exit:
+				entry = new Exit(x*SPRITE_WIDTH, y*SPRITE_HEIGHT, this);
+				m_actors.push_back(entry);
 				break;
 			}
 		}
@@ -80,23 +88,31 @@ int StudentWorld::init()
 
 int StudentWorld::move()
 {
-    // This code is here merely to allow the game to build, run, and terminate after you hit enter.
-    // Notice that the return value GWSTATUS_PLAYER_DIED will cause our framework to end the current level.
+     // Notice that the return value GWSTATUS_PLAYER_DIED will cause our framework to end the current level.
 	list <Actor*> ::iterator It;
 	for (It = m_actors.begin(); It != m_actors.end(); It++)
 	{
 		(*It)->doSomething();
 	}
 	m_player->doSomething();
-	if (m_player->isAlive())
+	if (m_isLevelFinished && m_player->isAlive()) //If player has exited, the code will move on to next level 
+	{
+		return GWSTATUS_FINISHED_LEVEL;
+	}
+	else if (m_player->isAlive()) 
 	{
 		return GWSTATUS_CONTINUE_GAME;
+	}
+	else
+	{
+		decLives(); //Do we have to check for lives or does framework do it for us?
+		return GWSTATUS_PLAYER_DIED;
 	}
 	//else deal with death later
 
 }
 
-bool StudentWorld::collision(int destX, int destY)
+bool StudentWorld::collision(int destX, int destY) //Check to see if the given point is inside of any Actors
 {
 	list<Actor*> ::iterator It;
 	for (It = m_actors.begin(); It != m_actors.end() ; It++)
@@ -109,8 +125,39 @@ bool StudentWorld::collision(int destX, int destY)
 	}
 }
 
+bool StudentWorld::noCitizens()
+{
+	return(m_citizenCount == 0);
+}
+
+void StudentWorld::levelFinished()
+{
+	m_isLevelFinished = true;
+}
+
+void StudentWorld::overlaps(StaticActor* checker) //Looks to see if there are any overlaps at the given coordinate point
+
+{
+	list<Actor*> ::iterator It;
+	for (It = m_actors.begin(); It != m_actors.end(); It++)
+	{
+		if((*It)->isOverlapping(checker->getX(), checker->getY())) //Individually checking each actor for coordinates overlapping with the checkers
+		{
+			checker->doThisThingWhileOverlapping(*It); //Calls the checker's unique overlap action, with a pointer to the target actor
+		}
+	}
+	if (m_player->isOverlapping(checker->getX(), checker->getY()))
+	{
+		checker->doThisThingWhileOverlappingPlayer(m_player);
+	}
+
+}
+
 void StudentWorld::cleanUp()
 {
+	list<Actor*> ::iterator It;
+	for (It = m_actors.begin(); It != m_actors.end(); It++)
+		delete *It;
 	m_actors.clear();
 	delete m_player;
 	
