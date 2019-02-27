@@ -54,6 +54,13 @@ StudentWorld* Actor::world()
 	return m_world;
 }
 
+void Actor::doSomething()
+{
+	if (!isAlive())
+		return;
+	classSpecificAction();
+}
+
  void Actor::tryMoving(Direction dir) // By default actors can't move (Only Beings can)
 {
 	return;
@@ -68,7 +75,7 @@ Wall::Wall(int x, int y, StudentWorld* world)
 	
 }
 
-void Wall::doSomething()
+void Wall::classSpecificAction()
 {
 	//will never do anything
 }
@@ -95,11 +102,12 @@ bool StaticActor::insideBoundingBox(int x, int y) //Most Static objects don't ha
 	return false;
 }
 
-void StaticActor::doSomething() //Static Actors all have same structure for doSomething
+ void StaticActor::classSpecificAction() //Static Actors all have same structure for doSomething
 {
 	checkForOverlapping(); //Check and handle all overlapping situations
-	//checkLifespans
 }
+
+
 
 StaticActor::~StaticActor()
 {
@@ -154,6 +162,78 @@ void Exit::doThisThingWhileOverlappingPlayer(Penelope* player)
 	return; 
 }
 
+
+
+//////////////////////////////////////////////////////////////////
+//Goodies
+//////////////////////////////////////////////////////////////////
+Goodie::Goodie(int imageID, int x, int y, StudentWorld* world)
+	:StaticActor(imageID, x, y, world, right, 1)
+{
+}
+
+void Goodie::doThisThingWhileOverlapping(Actor* target)
+{
+	return;
+}
+
+void Goodie::doThisThingWhileOverlappingPlayer(Penelope* player)
+{
+	world()->increaseScore(50);
+	die();
+	giveGoodie();
+	world()->playSound(SOUND_GOT_GOODIE);
+}
+
+Goodie::~Goodie()
+{
+}
+
+
+
+
+//VaccineGoodies
+VaccineGoodie::VaccineGoodie(int x, int y, StudentWorld* world)
+	:Goodie(IID_VACCINE_GOODIE, x, y, world)
+{
+
+}
+
+VaccineGoodie::~VaccineGoodie()
+{
+}
+
+void VaccineGoodie::giveGoodie()
+{
+	world()->giveGoodies(vaccine);
+}
+
+
+
+//Mine Gooides
+LandmineGoodie::LandmineGoodie(int x, int y, StudentWorld* world)
+	:Goodie(IID_LANDMINE_GOODIE, x, y, world)
+{}
+
+LandmineGoodie::~LandmineGoodie()
+{}
+
+void LandmineGoodie::giveGoodie()
+{
+	world()->giveGoodies(mine);
+}
+
+//Gas Goodies
+GasGoodie::GasGoodie(int x, int y, StudentWorld* world)
+	:Goodie(IID_GAS_CAN_GOODIE, x, y, world)
+{}
+GasGoodie::~GasGoodie()
+{}
+
+void GasGoodie::giveGoodie()
+{
+	world()->giveGoodies(gas);
+}
 
 //////////////////////////////////////////////////////////////////
 //BEING
@@ -244,9 +324,19 @@ int Penelope::getMines()
 	return m_mines;
 }
 
+void Penelope::addMines(int amt)
+{
+	m_mines += amt;
+}
+
 int Penelope::getFlames()
 {
 	return m_flames;
+}
+
+void Penelope::addFlames(int amt)
+{
+	m_flames += amt;
 }
 
 int Penelope::getVaccines()
@@ -254,7 +344,12 @@ int Penelope::getVaccines()
 	return m_vaccines;
 }
 
-void Penelope::doSomething()
+void Penelope::addVaccines(int amt)
+{
+	m_vaccines += amt;
+}
+
+void Penelope::classSpecificAction()
 {
 	//check to see if alive
 	int destX = Penelope::getX();
@@ -292,7 +387,7 @@ Citizen::Citizen(int x, int y, StudentWorld * world)
 {
 }
 
-void Citizen::doSomething()
+void Citizen::classSpecificAction()
 {
 	return; //for now, do nothing
 }

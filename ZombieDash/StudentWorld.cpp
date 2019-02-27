@@ -79,6 +79,20 @@ int StudentWorld::init()
 				entry = new Exit(x*SPRITE_WIDTH, y*SPRITE_HEIGHT, this);
 				m_actors.push_back(entry);
 				break;
+
+			case Level::gas_can_goodie:
+				entry = new GasGoodie(x*SPRITE_WIDTH, y*SPRITE_HEIGHT, this);
+				m_actors.push_back(entry);
+				break;
+			case Level::vaccine_goodie:
+				entry = new VaccineGoodie(x*SPRITE_WIDTH, y*SPRITE_HEIGHT, this);
+				m_actors.push_back(entry);
+				break;
+
+			case Level::landmine_goodie:
+				entry = new LandmineGoodie(x*SPRITE_WIDTH, y*SPRITE_HEIGHT, this);
+				m_actors.push_back(entry);
+				break;
 			}
 		}
 	}
@@ -92,9 +106,19 @@ int StudentWorld::move()
 	list <Actor*> ::iterator It;
 	for (It = m_actors.begin(); It != m_actors.end(); It++)
 	{
-		(*It)->doSomething();
+			(*It)->doSomething();
+			if (!((*It)->isAlive()))
+			{
+				list <Actor*>::iterator temp = It;
+				It--; 
+				delete *temp;
+				m_actors.erase(temp);
+			}
 	}
-	m_player->doSomething();
+	if (m_player->isAlive())
+	{
+		m_player->doSomething();
+	}
 	
 
 
@@ -138,6 +162,7 @@ bool StudentWorld::collision(int destX, int destY) //Check to see if the given p
 			return true;
 		}
 	}
+	return false;
 }
 
 bool StudentWorld::noCitizens()
@@ -159,7 +184,7 @@ void StudentWorld::overlaps(StaticActor* checker) //Looks to see if there are an
 		if((*It)->isOverlapping(checker->getX(), checker->getY())) //Individually checking each actor for coordinates overlapping with the checkers
 		{
 			checker->doThisThingWhileOverlapping(*It); //Calls the checker's unique overlap action, with a pointer to the target actor
-		}
+		} //Should change implementation to not pass pointers
 	}
 	if (m_player->isOverlapping(checker->getX(), checker->getY()))
 	{
@@ -176,6 +201,23 @@ void StudentWorld::cleanUp()
 	m_actors.clear();
 	delete m_player;
 	
+}
+
+void StudentWorld::giveGoodies(goodietype goods)
+{
+	switch (goods)
+	{
+	case vaccine:
+		m_player->addVaccines(1);
+		break;
+	case gas:
+		m_player->addFlames(5);
+		break;
+	case mine:
+		m_player->addMines(2);
+		break;
+	}
+
 }
 
 StudentWorld::~StudentWorld()

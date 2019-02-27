@@ -21,11 +21,14 @@ public:
 
 	virtual bool tryToEscape(); //will be called whenever an actor is overlapping with the exit. Only humans effected
 	StudentWorld* world();
-	virtual void doSomething() = 0;
+	void doSomething();
+
+
 	virtual ~Actor();
 private:
 	bool m_alive;
 	StudentWorld* m_world;
+	virtual void classSpecificAction() = 0;
 }; 
 
 class StaticActor :public Actor
@@ -36,10 +39,11 @@ public:
 	void checkForOverlapping();
 	virtual void doThisThingWhileOverlapping(Actor* target)=0;
 	virtual void doThisThingWhileOverlappingPlayer(Penelope* player) = 0;
-	virtual void doSomething(); //All non-goodie static actors will have the same doSomething (except walls)
+	 
 //	virtual void burnfall(); //The default for Static is to not burn(flames, vomit, pits dont burn), although goodies will
 	virtual ~StaticActor();
 private:
+	virtual void classSpecificAction(); 
 };
 
 class Exit : public StaticActor
@@ -48,19 +52,32 @@ public:
 	Exit(int x, int y, StudentWorld* world);
 	virtual void doThisThingWhileOverlapping(Actor* target);
 	virtual void doThisThingWhileOverlappingPlayer(Penelope* player);
-	virtual ~Exit();
+	virtual ~Exit(); //Needs to block flames
 
 private:
 
 };
 
-class Flame : public StaticActor
+class tempStaticActor : StaticActor
+{
+public:
+//	tempStaticActor();
+//	virtual void doSomething();
+//virtual ~tempStaticActor();
+
+protected:
+//	virtual bool checkLifespan();
+private:
+	int m_lifeSpan;
+};
+
+class Flame : public tempStaticActor
 {
 public:
 private:
 };
 
-class Vomit:public StaticActor
+class Vomit:public tempStaticActor
 {
 public:
 private:
@@ -72,7 +89,7 @@ public:
 private:
 };
 
-class Landmine: public StaticActor
+class Landmine: public tempStaticActor
 {
 public:
 private:
@@ -80,36 +97,56 @@ private:
 
 class Goodie : public StaticActor
 {
-public: //By default goodies will burn
+public: 
+	Goodie(int imageID, int x, int y, StudentWorld* world);
+	virtual void doThisThingWhileOverlapping(Actor* target);
+	virtual void doThisThingWhileOverlappingPlayer(Penelope* player);
+	//void burnfall(); //Goodies will all burn
+	virtual ~Goodie();
+	//By default goodies will burn
 private:
+	virtual void giveGoodie() = 0;
+
 };
 
-class VaccineGoodie :public StaticActor
+class VaccineGoodie :public Goodie
 {
 public:
+	VaccineGoodie(int x, int y, StudentWorld* world);
+
+	virtual ~VaccineGoodie();
 private:
+	virtual void giveGoodie();
 };
 
-class LandmineGoodie :public StaticActor
+class LandmineGoodie :public Goodie
 {
 public:
+	LandmineGoodie(int x, int y, StudentWorld* world);
+
+	virtual ~LandmineGoodie();
 private:
+	virtual void giveGoodie();
 };
 
-class GasGoodie :public StaticActor
+class GasGoodie :public Goodie
 {
 public:
+	GasGoodie(int x, int y, StudentWorld* world);
+
+	virtual ~GasGoodie();
 private:
+	virtual void giveGoodie();
 };
 
 class Wall : public Actor
 {
 public:
 	Wall(int x, int y, StudentWorld* world);
-	virtual void doSomething();
 	virtual bool insideBoundingBox(int x, int y); //Wall will need to use default definition
 	virtual ~Wall();
 private:
+	virtual void classSpecificAction();
 };
 
 class Being : public Actor
@@ -125,7 +162,8 @@ private:
 
 class Human : public Being
 {
-public:Human(int imageID, int x, int y, StudentWorld* world);
+public:
+	Human(int imageID, int x, int y, StudentWorld* world);
 	   virtual ~Human();
 	   int getInfect();
 	   //virtual void escape();
@@ -143,13 +181,17 @@ public:
 	Penelope(int startX, int startY, StudentWorld *world);
 	virtual void kill();
 	virtual int howFarDoIMove();
-	virtual void doSomething();
+	
 	virtual bool tryToEscape(); 
 	virtual ~Penelope();
 	int getMines();
+	void addMines(int amt);
 	int getFlames();
+	void addFlames(int amt);
 	int getVaccines();
+	void addVaccines(int amt);
 private:
+	virtual void classSpecificAction();
 	int m_mines;
 	int m_flames;
 	int m_vaccines;
@@ -161,12 +203,12 @@ class Citizen : public Human
 {
 public:
 Citizen(int x, int y, StudentWorld* world);
-virtual void doSomething();
 virtual int howFarDoIMove();
 virtual void kill();
 virtual	~Citizen();
 
 private:
+	virtual void classSpecificAction();
 };
 
 class Zombie : public Being
