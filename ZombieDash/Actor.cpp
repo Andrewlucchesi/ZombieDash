@@ -7,7 +7,7 @@
 ////////////////////////////////////////////////////////////////
 //ACTOR
 ////////////////////////////////////////////////////////////////
-Actor::Actor(int ImageID, int x, int y, StudentWorld* world, Direction dir = right, int depth = 0)
+Actor::Actor(int ImageID, double x, double y, StudentWorld* world, Direction dir = right, int depth = 0)
 	:GraphObject(ImageID, x, y, dir, depth), m_alive(true)
 {
 	m_world = world;
@@ -18,25 +18,41 @@ Actor::~Actor()
 	//Nothing yet
 }
 
-bool Actor::isOverlapping(int x, int y) //Returns true if the given coordinate is within 10 pixels of the center of this actor
+bool Actor::isOverlapping(double x, double y) //Returns true if the given coordinate is within 10 pixels of the center of this actor
 {
 	double deltaX = (getX() - x);
 	double deltaY = (getY() - y);
 	return(((deltaX*deltaX) + (deltaY * deltaY)) <= 100);
 }
 
-bool Actor::insideBoundingBox(int x, int y) //Checks to see if the coordinate x,y is inside the actor's bounding box
+bool Actor::insideBoundingBox(double x, double y) //Checks to see if the coordinate x,y is inside the actor's bounding box
 {
-	int boxX = Actor::getX();
-	int boxY = Actor::getY();
+	double boxX = Actor::getX();
+	double boxY = Actor::getY();
 	if (boxX <= x && (boxX + SPRITE_WIDTH - 1) >= x && boxY <= y && (boxY + SPRITE_HEIGHT - 1) >= y)
 		return true;
 	else return false;
 }
 
+
+bool Actor::blocksFlames()
+{
+	return false;
+}
+
 bool Actor::isAlive() //checks to see if the actor is alive
 {
 	return m_alive;
+}
+
+void Actor::tryToInfect()
+{
+	return;
+}
+
+bool Actor::canTriggerMines()
+{
+	return false;
 }
 
 void Actor::die()
@@ -69,7 +85,7 @@ void Actor::doSomething()
 //////////////////////////////////////////////////////////////////
 //WALL
 //////////////////////////////////////////////////////////////////
-Wall::Wall(int x, int y, StudentWorld* world)
+Wall::Wall(double x, double y, StudentWorld* world)
 	:Actor(IID_WALL, x, y, world)
 { 
 	
@@ -80,9 +96,19 @@ void Wall::classSpecificAction()
 	//will never do anything
 }
 
-bool Wall::insideBoundingBox(int x, int y)
+bool Wall::insideBoundingBox(double x, double y)
 {
 	return Actor::insideBoundingBox(x, y);
+}
+
+void Wall::burnfall()
+{
+	return;
+}
+
+bool Wall::blocksFlames()
+{
+	return true;
 }
 
 Wall::~Wall()
@@ -92,44 +118,36 @@ Wall::~Wall()
 //////////////////////////////////////////////////////////////////
 //Static
 //////////////////////////////////////////////////////////////////
-StaticActor::StaticActor(int imageID, int x, int y, StudentWorld * world, Direction dir, int depth)
+StaticActor::StaticActor(int imageID, double x, double y, StudentWorld * world, Direction dir, int depth)
 	:Actor(imageID, x, y, world, dir, depth)
 {
 }
 
-bool StaticActor::insideBoundingBox(int x, int y) //Most Static objects don't have collision boxes
+bool StaticActor::insideBoundingBox(double x, double y) //Static objects don't have collision boxes
 {
 	return false;
 }
 
  void StaticActor::classSpecificAction() //Static Actors all have same structure for doSomething
 {
-	checkForOverlapping(); //Check and handle all overlapping situations
+	world()->overlaps(this); //Check and handle all overlapping situations
 }
 
 
 
-StaticActor::~StaticActor()
+ void StaticActor::burnfall()
+ {
+	 return;
+ }
+
+ StaticActor::~StaticActor()
 {
 
 }
 
-void StaticActor::checkForOverlapping()
-{
-	world()->overlaps(this);
-}
 
-/*void StaticActor::burnfall()
-{
-	return;
-	//By default, staticactors do not burn/fall. However, all goodies burn and so do LandMines
-}
-*/
-
-//////////////////////////////////////////////////////////////////
-//EXIT
-//////////////////////////////////////////////////////////////////
-Exit::Exit(int x, int y, StudentWorld* world)
+//EXITS
+Exit::Exit(double x, double y, StudentWorld* world)
 	:StaticActor(IID_EXIT, x, y, world, right, 1)
 {
 
@@ -162,12 +180,35 @@ void Exit::doThisThingWhileOverlappingPlayer(Penelope* player)
 	return; 
 }
 
+bool Exit::blocksFlames()
+{
+	return true;
+}
+
+//PITS
+Pit::Pit(double x, double y, StudentWorld* world)
+	:StaticActor(IID_PIT, x, y, world, right, 0)
+{}
+
+void Pit::doThisThingWhileOverlapping(Actor * target)
+{
+	target->burnfall();
+}
+
+void Pit::doThisThingWhileOverlappingPlayer(Penelope * player)
+{
+	doThisThingWhileOverlapping(player);
+}
+
+Pit::~Pit()
+{
+}
 
 
 //////////////////////////////////////////////////////////////////
 //Goodies
 //////////////////////////////////////////////////////////////////
-Goodie::Goodie(int imageID, int x, int y, StudentWorld* world)
+Goodie::Goodie(int imageID, double x, double y, StudentWorld* world)
 	:StaticActor(imageID, x, y, world, right, 1)
 {
 }
@@ -181,8 +222,13 @@ void Goodie::doThisThingWhileOverlappingPlayer(Penelope* player)
 {
 	world()->increaseScore(50);
 	die();
-	giveGoodie();
+	giveGoodie(player);
 	world()->playSound(SOUND_GOT_GOODIE);
+}
+
+void Goodie::burnfall()
+{
+	die();
 }
 
 Goodie::~Goodie()
@@ -193,7 +239,7 @@ Goodie::~Goodie()
 
 
 //VaccineGoodies
-VaccineGoodie::VaccineGoodie(int x, int y, StudentWorld* world)
+VaccineGoodie::VaccineGoodie(double x, double y, StudentWorld* world)
 	:Goodie(IID_VACCINE_GOODIE, x, y, world)
 {
 
@@ -203,57 +249,174 @@ VaccineGoodie::~VaccineGoodie()
 {
 }
 
-void VaccineGoodie::giveGoodie()
+void VaccineGoodie::giveGoodie(Penelope* player)
 {
-	world()->giveGoodies(vaccine);
+	player->addVaccines(1);
 }
 
 
 
 //Mine Gooides
-LandmineGoodie::LandmineGoodie(int x, int y, StudentWorld* world)
+LandmineGoodie::LandmineGoodie(double x, double y, StudentWorld* world)
 	:Goodie(IID_LANDMINE_GOODIE, x, y, world)
 {}
 
 LandmineGoodie::~LandmineGoodie()
 {}
 
-void LandmineGoodie::giveGoodie()
+void LandmineGoodie::giveGoodie(Penelope* player)
 {
-	world()->giveGoodies(mine);
+	player->addMines(2);
 }
 
 //Gas Goodies
-GasGoodie::GasGoodie(int x, int y, StudentWorld* world)
+GasGoodie::GasGoodie(double x, double y, StudentWorld* world)
 	:Goodie(IID_GAS_CAN_GOODIE, x, y, world)
 {}
 GasGoodie::~GasGoodie()
 {}
 
-void GasGoodie::giveGoodie()
+void GasGoodie::giveGoodie(Penelope* player)
 {
-	world()->giveGoodies(gas);
+	player->addFlames(5);
+}
+
+//////////////////////////////////////////////////////////////////
+//Temp StaticActors
+//////////////////////////////////////////////////////////////////
+tempStaticActor::tempStaticActor(int imageID, double x, double y, StudentWorld* world, Direction dir, int depth)
+: StaticActor(imageID, x, y, world, dir, depth) , m_Age(0)
+{}
+
+void tempStaticActor::classSpecificAction()
+{
+	m_Age++;
+	if (withinLifespan())
+		world()->overlaps(this);
+	return;
+}
+
+tempStaticActor::~tempStaticActor()
+{}
+
+void tempStaticActor::doThisThingWhileOverlappingPlayer(Penelope * player)
+{
+	doThisThingWhileOverlapping(player);
+}
+
+bool tempStaticActor::withinLifespan() //By default, temp static actors like flames and vomit die after being alive for 2 ticks
+{
+	if (getAge() < 2) //If the actors Age is less than two ticks, return false proceeds with its Action
+	{
+		return true;
+	}
+	StaticActor::die(); //If actor is older than two ticks, it is marked as dead and removed fromt he game.
+	return false;
+}
+
+int tempStaticActor::getAge()
+{
+	return m_Age;
+}
+
+//Flames
+Flame::Flame(double x, double y, StudentWorld* world, Direction dir)
+	:tempStaticActor(IID_FLAME, x, y, world, dir, 0)
+{}
+
+void Flame::doThisThingWhileOverlapping(Actor* target)
+{
+	target->burnfall();
+}
+
+bool Flame::canTriggerMines()
+{
+	return true;
+}
+
+Flame::~Flame()
+{
+}
+
+//Vommit
+Vomit::Vomit(double x, double y, StudentWorld* world, Direction dir)
+	:tempStaticActor(IID_VOMIT, x, y, world, dir, 0)
+{}
+
+void Vomit::doThisThingWhileOverlapping(Actor * target)
+{
+	target->tryToInfect();
+}
+
+Vomit::~Vomit()
+{
+}
+
+
+
+//Landmines
+Landmine::Landmine(double x, double y, StudentWorld * world)
+	:tempStaticActor(IID_LANDMINE, x, y, world, right, 1)
+{}
+
+void Landmine::doThisThingWhileOverlapping(Actor * target)
+{
+	if (target->canTriggerMines()) //if triggered, explodes
+	{
+		die();
+		world()->playSound(SOUND_LANDMINE_EXPLODE);
+		double x = getX(); double y = getY();
+		world()->addActor(new Pit(x, y, world()));  //Creates a pit at mines location
+		for (double i = (x - SPRITE_WIDTH); i <= x + SPRITE_WIDTH; i += SPRITE_WIDTH)	//Add flames in an 3x3 square around mine
+		{
+			for (double j = (y - SPRITE_HEIGHT); j <= y + SPRITE_HEIGHT; j += SPRITE_HEIGHT)
+			{
+				if ((world()->isFlammable(i, j)))
+					world()->addActor(new Flame(i, j, world(), up));
+			}
+		}
+	
+	}
+}
+
+bool Landmine::withinLifespan() //Lifespan of landmine is inverted. Landmine is only active once the age is greater than 30, and will never die from age
+{
+	if (getAge() > 30)
+		return true;
+	else
+		return false;
+	
 }
 
 //////////////////////////////////////////////////////////////////
 //BEING
 //////////////////////////////////////////////////////////////////
-Being::Being(int imageID, int x, int y, StudentWorld* world)
+Being::Being(int imageID, double x, double y, StudentWorld* world)
 	:Actor(imageID, x, y, world)
 {
+}
+
+void Being::burnfall()
+{
+	kill();
 }
 
 Being::~Being()
 {
 }
 
+bool Being::canTriggerMines()
+{
+	return true;
+}
+
 void Being::tryMoving(const Direction dir)
 {
-	int dist = howFarDoIMove();
+	double dist = howFarDoIMove();
 	if (!(Being::getDirection() == dir))
 		Being::setDirection(dir);
-	int destx = Being::getX();
-	int desty = Being::getY();
+	double destx = Being::getX();
+	double desty = Being::getY();
 	switch (dir)
 	{
 	case left:
@@ -276,7 +439,7 @@ void Being::tryMoving(const Direction dir)
 //////////////////////////////////////////////////////////////////
 //Human
 //////////////////////////////////////////////////////////////////
-Human::Human(int imageID, int x, int y, StudentWorld* world)
+Human::Human(int imageID, double x, double y, StudentWorld* world)
 	:Being(imageID, x, y, world), m_infectCount(0)
 {
 
@@ -291,6 +454,17 @@ int Human::getInfect()
 	return m_infectCount;
 }
 
+void Human::tryToInfect()
+{
+	m_isInfected = true;
+}
+
+void Human::cure()
+{
+	m_isInfected = false;
+	m_infectCount = 0;
+}
+
 //////////////////////////////////////////////////////////////////
 //Pene
 //////////////////////////////////////////////////////////////////
@@ -302,7 +476,12 @@ Penelope::Penelope(int startX, int startY, StudentWorld *world)
 
 bool Penelope::tryToEscape() //returns true if there are no citizens left
 {
-	return(world()->noCitizens());
+	if (world()->noCitizens())
+	{
+		world()->playSound(SOUND_LEVEL_FINISHED); 
+		return true;
+	}
+	return false;
 }
 
 Penelope::~Penelope()
@@ -311,10 +490,15 @@ Penelope::~Penelope()
 
 void Penelope::kill() //This function will be called when Penelope is killed
 {
-	return; //need to edit
+	if (isAlive())
+	{
+		die();
+		world()->playSound(SOUND_PLAYER_DIE);
+		return;
+	}
 }
 
-int Penelope::howFarDoIMove()
+double Penelope::howFarDoIMove()
 {
 	return(4); //Penelope moves 4 pixels
 }
@@ -352,12 +536,12 @@ void Penelope::addVaccines(int amt)
 void Penelope::classSpecificAction()
 {
 	//check to see if alive
-	int destX = Penelope::getX();
-	int destY = Penelope::getY();
+	double destX = Penelope::getX();
+	double destY = Penelope::getY();
 	int key;
-	if (world()->getKey(key)) //add accessor for world
+	if (world()->getKey(key))
 	{
-		switch (key)
+		switch (key)  //Handle all possible inputs and make appropiate actions for each input
 		{
 		case KEY_PRESS_LEFT:
 			tryMoving(left);
@@ -371,18 +555,73 @@ void Penelope::classSpecificAction()
 		case KEY_PRESS_DOWN:
 			tryMoving(down);
 			break;
+
+		case KEY_PRESS_TAB:  //Place landmine
+			if (m_mines > 0)
+			{
+				world()->addActor(new Landmine(getX(), getY(), world()));
+				m_mines--; 
+			}
+			break;
+		case KEY_PRESS_ENTER: //Use Vaccine
+		{
+			if (m_vaccines > 0)
+			{
+				m_vaccines--;
+				
+			}
+		}
+		case KEY_PRESS_SPACE: //Fire flamethrower
+			if (m_flames > 0)
+			{
+				m_flames--;
+				world()->playSound(SOUND_PLAYER_FIRE);
+
+				Direction dir = getDirection();
+				bool blocked = false;
+				for (double i = 1; i <= 3; i++) //Figure out which direction and how far apart to place flames
+				{
+					double destx = getX();
+					double desty = getY();
+					switch (dir)
+					{
+
+					case up: 
+						desty += (SPRITE_HEIGHT*i);
+						break;
+					case down:
+						desty -= (SPRITE_HEIGHT*i);
+						break;
+					case right:
+						destx += (SPRITE_WIDTH*i);
+						break;
+					case left:
+						destx -= (SPRITE_WIDTH*i);
+						break;
+					}
+
+					if ((world()->isFlammable(destx, desty))) //If the next space is flammable, add a flame
+					{
+						world()->addActor(new Flame(destx, desty, world(), dir));
+					}
+					else //If not, do nothing and do not introduce any more flames
+					{
+						break;
+					}
+				}
+			}
 		}
 	}
-	//Use studentworld getKey
-	return; //Page 27
-	//Make penelope move when keys are pressed
+	
+	return; 
+	
 }
 
 //////////////////////////////////////////////////////////////////
 //Citizen
 //////////////////////////////////////////////////////////////////
 
-Citizen::Citizen(int x, int y, StudentWorld * world)
+Citizen::Citizen(double x, double y, StudentWorld * world)
 	:Human(IID_CITIZEN, x, y, world)
 {
 }
@@ -397,7 +636,15 @@ void Citizen::kill()
 	//kill the citizen
 }
 
-int Citizen::howFarDoIMove()
+bool Citizen::tryToEscape()
+{
+	world()->increaseScore(500);
+	world()->playSound(SOUND_CITIZEN_SAVED);
+	die();
+	return true;
+}
+
+double Citizen::howFarDoIMove()
 {
 	return(2); //Citizens move 2 pixels at a time
 }
@@ -405,4 +652,15 @@ int Citizen::howFarDoIMove()
 Citizen::~Citizen()
 {
 
+}
+
+
+
+//////////////////////////////////////////////////////////////////
+//Zombies
+//////////////////////////////////////////////////////////////////
+
+double Zombie::howFarDoIMove()
+{
+	return 1;
 }

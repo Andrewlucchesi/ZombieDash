@@ -9,21 +9,22 @@
 class Actor;
 class StaticActor;
 class Penelope;
-enum goodietype { vaccine, mine, gas }; //used to tell studentworld what goodie to give Penelope
 
 class StudentWorld : public GameWorld
 {//added comment
 public:
     StudentWorld(std::string assetPath);
+	void addActor(Actor* newActor);
+	bool isFlammable(double x, double y);
      int init();
      int move();
     void cleanUp();
 	void overlaps(StaticActor* checker);
-	bool collision(int x, int y);
+	bool collision(double x, double y);
+	void citizenGone();
 	bool noCitizens(); //true if there are no citizens
 	void levelFinished(); //set level to finished
 
-	void giveGoodies(goodietype goods);
 	virtual ~StudentWorld();
 
 private:

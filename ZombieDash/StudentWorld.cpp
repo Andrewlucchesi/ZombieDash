@@ -22,6 +22,26 @@ StudentWorld::StudentWorld(string assetPath)
 
 }
 
+void StudentWorld::addActor(Actor * newActor)
+{
+	m_actors.push_front(newActor);
+}
+
+bool StudentWorld::isFlammable(double x, double y)
+{
+	bool Flammable = true;
+	list<Actor*> ::iterator It;
+	for (It = m_actors.begin(); It != m_actors.end(); It++)
+	{
+		if ((*It)->isOverlapping(x, y)) //Individually checking each actor for coordinates overlapping with the checkers
+		{
+			if ((*It)->blocksFlames())
+				Flammable = false;
+		}
+	}
+	return Flammable;
+}
+
 int StudentWorld::init()
 {
 	//must create Pene according to first level file
@@ -93,6 +113,7 @@ int StudentWorld::init()
 				entry = new LandmineGoodie(x*SPRITE_WIDTH, y*SPRITE_HEIGHT, this);
 				m_actors.push_back(entry);
 				break;
+
 			}
 		}
 	}
@@ -104,15 +125,29 @@ int StudentWorld::move()
 {
      // Notice that the return value GWSTATUS_PLAYER_DIED will cause our framework to end the current level.
 	list <Actor*> ::iterator It;
-	for (It = m_actors.begin(); It != m_actors.end(); It++)
+	for (It = m_actors.begin(); It != m_actors.end();)
 	{
 			(*It)->doSomething();
 			if (!((*It)->isAlive()))
 			{
-				list <Actor*>::iterator temp = It;
-				It--; 
-				delete *temp;
-				m_actors.erase(temp);
+				if (It == m_actors.begin())
+				{
+					delete *It;
+					m_actors.erase(It);
+					It = m_actors.begin();
+				}
+				else 
+				{
+					list <Actor*>::iterator temp = It;
+					It++;
+					delete *temp;
+					m_actors.erase(temp);
+				}
+
+			}
+			else
+			{
+				It++;
 			}
 	}
 	if (m_player->isAlive())
@@ -136,8 +171,8 @@ int StudentWorld::move()
 
 //Check for exit conditions
 	if (m_isLevelFinished && m_player->isAlive()) //If player has exited, the code will move on to next level 
-	{
-		return GWSTATUS_FINISHED_LEVEL;
+	{											  //The assumption was made that the player needs to be alive to finish the level
+		return GWSTATUS_FINISHED_LEVEL;			  //Therefore, if the player dies on the same tick as they would finish the level, the player does not exit
 	}
 	else if (m_player->isAlive())
 	{
@@ -145,13 +180,13 @@ int StudentWorld::move()
 	}
 	else
 	{
-		decLives(); //Do we have to check for lives or does framework do it for us?
+		decLives(); 
 		return GWSTATUS_PLAYER_DIED;
 	}
 	//else deal with death later
 }
 
-bool StudentWorld::collision(int destX, int destY) //Check to see if the given point is inside of any Actors
+bool StudentWorld::collision(double destX, double destY) //Check to see if the given point is inside of any Actors
 {
 	list<Actor*> ::iterator It;
 	for (It = m_actors.begin(); It != m_actors.end() ; It++)
@@ -163,6 +198,11 @@ bool StudentWorld::collision(int destX, int destY) //Check to see if the given p
 		}
 	}
 	return false;
+}
+
+void StudentWorld::citizenGone()
+{
+	m_citizenCount--;
 }
 
 bool StudentWorld::noCitizens()
@@ -201,23 +241,6 @@ void StudentWorld::cleanUp()
 	m_actors.clear();
 	delete m_player;
 	
-}
-
-void StudentWorld::giveGoodies(goodietype goods)
-{
-	switch (goods)
-	{
-	case vaccine:
-		m_player->addVaccines(1);
-		break;
-	case gas:
-		m_player->addFlames(5);
-		break;
-	case mine:
-		m_player->addMines(2);
-		break;
-	}
-
 }
 
 StudentWorld::~StudentWorld()
