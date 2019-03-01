@@ -114,6 +114,11 @@ int StudentWorld::init()
 				m_actors.push_back(entry);
 				break;
 
+			case Level::citizen:
+				entry = new Citizen(x*SPRITE_WIDTH, y*SPRITE_HEIGHT, this);
+				m_citizenCount++;
+				m_actors.push_back(entry);
+				break;
 			}
 		}
 	}
@@ -161,7 +166,7 @@ int StudentWorld::move()
 	ostringstream oss;
 	oss.setf(ios::fixed);
 	oss << "Score: ";
-	oss << setfill('0') << setw(6) << getScore();
+	oss << internal << setfill('0') << setw(6) << getScore();
 	oss << "  Level: ";
 	oss << setfill('0') << setw(2) << getLevel();
 	oss << "  Lives: " << getLives();
@@ -186,7 +191,7 @@ int StudentWorld::move()
 	//else deal with death later
 }
 
-bool StudentWorld::collision(double destX, double destY) //Check to see if the given point is inside of any Actors
+bool StudentWorld::collision(double destX, double destY, Actor* caller) //Check to see if the given point is inside of any Actors
 {
 	list<Actor*> ::iterator It;
 	for (It = m_actors.begin(); It != m_actors.end() ; It++)
@@ -194,10 +199,19 @@ bool StudentWorld::collision(double destX, double destY) //Check to see if the g
 		if ((*It)->insideBoundingBox(destX, destY) || (*It)->insideBoundingBox(destX + SPRITE_WIDTH - 1, destY)
 			|| (*It)->insideBoundingBox(destX, destY + SPRITE_HEIGHT - 1) || (*It)->insideBoundingBox(destX + SPRITE_HEIGHT - 1, destY + SPRITE_HEIGHT - 1) ) //Check to see if corners of moving box will be inside of a boundingbox
 		{
-			return true;
+			if ((*It) != caller)
+				return true;
 		}
 	}
-	return false;
+
+	if (m_player->insideBoundingBox(destX, destY) || m_player->insideBoundingBox(destX + SPRITE_WIDTH - 1, destY)
+		|| m_player->insideBoundingBox(destX, destY + SPRITE_HEIGHT - 1) || m_player->insideBoundingBox(destX + SPRITE_HEIGHT - 1, destY + SPRITE_HEIGHT - 1))
+	{
+		if (m_player != caller)
+			return true;
+	}
+		
+		return false;
 }
 
 void StudentWorld::citizenGone()
@@ -213,6 +227,21 @@ bool StudentWorld::noCitizens()
 void StudentWorld::levelFinished()
 {
 	m_isLevelFinished = true;
+}
+
+bool StudentWorld::isZombieVomitTriggerAt(double x, double y)
+{
+	bool result = false;
+	list<Actor*> ::iterator It;
+	for (It = m_actors.begin(); It != m_actors.end(); It++)
+	{
+		if ((*It)->isOverlapping(x, y) && (*It)->triggersZombieVomit())
+		{
+			result = true;
+			break;
+		}
+	}
+	return result;
 }
 
 void StudentWorld::overlaps(StaticActor* checker) //Looks to see if there are any overlaps at the given coordinate point
@@ -241,6 +270,44 @@ void StudentWorld::cleanUp()
 	m_actors.clear();
 	delete m_player;
 	
+}
+
+bool StudentWorld::locateNearestCitizenThreat(double x, double y, double & otherX, double & otherY, double & distance)
+{	
+	distance = -1;
+	list<Actor*> ::iterator It;
+	for (It = m_actors.begin(); It != m_actors.end(); It++) 
+	{
+		if ((*It)->threatensCitizens())
+		{
+			double tempDist = calculateDistance(x, y, (*It)->getX(), (*It)->getY());
+			if (distance == -1 || tempDist < distance)
+			{
+				distance = tempDist;
+				otherX = (*It)->getX();
+				otherY = (*It)->getY();
+			}
+		}
+	}
+	if (distance == -1)
+		return false;
+	else 
+		return true;
+}
+
+bool StudentWorld::locatePlayer(double x, double y, double & otherX, double & otherY, double & distance)
+{
+	otherX = m_player->getX();
+	otherY = m_player->getY();
+	distance = calculateDistance(x, y, otherX, otherY);
+	return true;
+}
+
+double StudentWorld::calculateDistance(double x1, double y1, double x2, double y2)
+{
+	double deltaX = (x1 - x2);
+	double deltaY = (y1 - y2);
+	return(sqrt((deltaX*deltaX) + (deltaY * deltaY)));
 }
 
 StudentWorld::~StudentWorld()

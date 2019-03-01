@@ -15,7 +15,7 @@ public:
 	virtual bool blocksFlames();
 	bool isOverlapping(double x, double y); //Checks to see if the specified coordinate is overlapping with actor
 
-	virtual void tryMoving(Direction dir);
+	virtual bool tryMoving(Direction dir);
 	bool isAlive();
 	virtual void burnfall() = 0;
 	virtual void tryToInfect(); //Default for infect function will be to do nothing. Only humans can be infected
@@ -24,6 +24,16 @@ public:
 	virtual bool tryToEscape(); //will be called whenever an actor is overlapping with the exit. Only humans effected
 	StudentWorld* world();
 	void doSomething();
+
+	// Can this object cause a zombie to vomit?
+	virtual bool triggersZombieVomit();
+
+	// Is this object a threat to citizens?
+	virtual bool threatensCitizens();
+
+	// Does this object trigger citizens to follow it or flee it?
+	virtual bool triggersCitizens();
+
 	virtual ~Actor();
 private:
 	bool m_alive;
@@ -175,13 +185,16 @@ class Being : public Actor
 public: Being(int imageID, double x, double y, StudentWorld* world);
 		
 	    virtual void burnfall(); // all beings are burned the same way, call the kill function
-		virtual double howFarDoIMove() = 0;
 		virtual bool canTriggerMines();
-		void tryMoving( Direction dir);
+		bool tryMoving( Direction dir);
 		virtual ~Being();
-private:
+protected:
+	virtual bool isParalyzed(); 
+	bool tryMovingTorwardsPoint(double x, double y);
 	virtual void kill() = 0;
-	bool m_resting;
+private:
+	bool m_paralyzed;
+	virtual double howFarDoIMove() = 0;
 };
 
 class Human : public Being
@@ -191,11 +204,17 @@ public:
 	   virtual ~Human();
 	   int getInfect();
 	   virtual void tryToInfect(); //Allow for humans to be infected. Will set infection count to one, which will begin counting
+	   virtual bool triggersZombieVomit();
+
 protected:
 	void cure();
+	bool checkForCriticalInfection(); //Checks to see if an infection will turn the human into a zombie
 private:
 	int m_infectCount;
 	bool m_isInfected;
+	virtual void classSpecificAction();
+	virtual void humanSpecificAction() = 0;
+	 
 };
 
 
@@ -203,8 +222,6 @@ class Penelope : public Human
 {
 public:
 	Penelope(int startX, int startY, StudentWorld *world);
-	
-	virtual double howFarDoIMove();
 	virtual bool tryToEscape(); 
 	virtual ~Penelope();
 	int getMines();
@@ -213,12 +230,17 @@ public:
 	void addFlames(int amt);
 	int getVaccines();
 	void addVaccines(int amt);
-private:
-	virtual void classSpecificAction(); 
+
+	virtual bool triggersCitizens();
+protected:
 	virtual void kill();
+	virtual bool isParalyzed(); //Always returns false for Penelope
+private:
+	virtual void humanSpecificAction(); 
 	int m_mines;
 	int m_flames;
 	int m_vaccines;
+	virtual double howFarDoIMove();
 
 };
 
@@ -228,18 +250,26 @@ public:
 Citizen(double x, double y, StudentWorld* world);
 virtual double howFarDoIMove();
 virtual bool tryToEscape();
+virtual void tryToInfect();
 virtual	~Citizen();
 
-private:
-	virtual void classSpecificAction();
+protected:
 	virtual void kill();
+private:
+	virtual void humanSpecificAction();
+
 };
 
 class Zombie : public Being
 {
 public:
+	Zombie(double x, double y, StudentWorld* world);
 	virtual double howFarDoIMove();
+	virtual bool threatensCitizens();
+	virtual bool triggersCitizens();
+	virtual ~Zombie();
 private:
+	//virtual void classSpecificAction();
 };
 
 class DumbZombie : public Zombie

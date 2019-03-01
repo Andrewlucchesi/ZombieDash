@@ -13,6 +13,11 @@ Actor::Actor(int ImageID, double x, double y, StudentWorld* world, Direction dir
 	m_world = world;
 }
 
+bool Actor::triggersCitizens()
+{
+	return false;
+}
+
 Actor::~Actor()
 { 
 	//Nothing yet
@@ -20,9 +25,7 @@ Actor::~Actor()
 
 bool Actor::isOverlapping(double x, double y) //Returns true if the given coordinate is within 10 pixels of the center of this actor
 {
-	double deltaX = (getX() - x);
-	double deltaY = (getY() - y);
-	return(((deltaX*deltaX) + (deltaY * deltaY)) <= 100);
+	return((world()->calculateDistance(x, y, getX(), getY())) <= 10);
 }
 
 bool Actor::insideBoundingBox(double x, double y) //Checks to see if the coordinate x,y is inside the actor's bounding box
@@ -77,9 +80,19 @@ void Actor::doSomething()
 	classSpecificAction();
 }
 
- void Actor::tryMoving(Direction dir) // By default actors can't move (Only Beings can)
+bool Actor::triggersZombieVomit()
 {
-	return;
+	return false;
+}
+
+bool Actor::threatensCitizens()
+{
+	return false;
+}
+
+ bool Actor::tryMoving(Direction dir) // By default actors can't move (Only Beings can)
+{
+	return false;
 }
 
 //////////////////////////////////////////////////////////////////
@@ -405,12 +418,105 @@ Being::~Being()
 {
 }
 
+bool Being::isParalyzed()
+{
+	bool cur = m_paralyzed; 
+	m_paralyzed = !m_paralyzed;
+	return cur;
+}
+
+bool Being::tryMovingTorwardsPoint(double x, double y)
+{
+	double deltaX = x - getX();
+	double deltaY = y - getY();
+	if (x == getX()) //on same row as target
+	{
+		if (deltaY > 0  && tryMoving(up)) //target is above current point
+		{
+			setDirection(up);
+			return true;
+		}
+		else if(deltaY < 0 && tryMoving(down))
+		{
+			setDirection(down);
+			return true;
+		}
+	}
+	else if (y == getY()) //on same collumn as target
+	{
+		if (deltaX > 0 && tryMoving(right))
+		{
+			setDirection(right);
+			return true;
+		}
+		else if(deltaX < 0 && tryMoving(left))
+		{
+			setDirection(left);
+			return true;
+		}
+	}
+	else
+	{
+		int whichDir = randInt(0, 1); //Randomly try either to move vertically (0) or horizantally (1) torwards target
+
+		if (whichDir == 0)
+		{
+			if (deltaY > 0 && tryMoving(up))
+			{
+				setDirection(up);
+				return true;
+			}
+			else if (deltaY < 0 && tryMoving(down))
+			{
+				setDirection(down);
+				return true;
+			}
+			else if (deltaX > 0 && tryMoving(right))
+			{
+				setDirection(right);
+				return true;
+			}
+			else if (deltaX < 0 && tryMoving(left))
+			{
+				setDirection(left);
+				return true;
+			}
+		}
+		else if (whichDir == 1)
+		{
+			if (deltaX > 0 && tryMoving(right))
+			{
+				setDirection(right);
+				return true;
+			}
+			else if (deltaX < 0 && tryMoving(left))
+			{
+				setDirection(left);
+				return true;
+			}
+			else if (deltaY > 0 && tryMoving(up))
+			{
+				setDirection(up);
+				return true;
+			}
+			else if (deltaY < 0 && tryMoving(down))
+			{
+				setDirection(down);
+				return true;
+			}
+		}
+		return false;
+	}
+}
+
+
+
 bool Being::canTriggerMines()
 {
 	return true;
 }
 
-void Being::tryMoving(const Direction dir)
+bool Being::tryMoving(const Direction dir)
 {
 	double dist = howFarDoIMove();
 	if (!(Being::getDirection() == dir))
@@ -432,8 +538,12 @@ void Being::tryMoving(const Direction dir)
 		desty -= dist;
 		break;
 	}
-	if (!(Being::world()->collision(destx, desty)))
+	if (!(Being::world()->collision(destx, desty, this)))
+	{
 		Being::moveTo(destx, desty);
+		return true;
+	}
+	return false;
 }
 
 //////////////////////////////////////////////////////////////////
@@ -459,11 +569,51 @@ void Human::tryToInfect()
 	m_isInfected = true;
 }
 
+bool Human::triggersZombieVomit()
+{
+	return true;
+}
+
 void Human::cure()
 {
 	m_isInfected = false;
 	m_infectCount = 0;
 }
+
+bool Human::checkForCriticalInfection()
+{
+	if (m_isInfected == true)
+	{
+		m_infectCount++;
+		if (m_infectCount >= 500)
+		{
+			world()->playSound(SOUND_ZOMBIE_BORN);
+			kill();
+			int chance = randInt(1, 100);
+			if (chance <= 70)
+			{
+				//introduce a dumb zombie
+			}
+			else
+			{
+				//introduce a smart zombie
+			}
+			return true;
+		}
+
+	}
+	return false;
+}
+
+void Human::classSpecificAction()
+{
+	if (checkForCriticalInfection() || isParalyzed())
+		return;
+	humanSpecificAction();
+
+}
+
+
 
 //////////////////////////////////////////////////////////////////
 //Pene
@@ -496,6 +646,11 @@ void Penelope::kill() //This function will be called when Penelope is killed
 		world()->playSound(SOUND_PLAYER_DIE);
 		return;
 	}
+}
+
+bool Penelope::isParalyzed()
+{
+	return false;
 }
 
 double Penelope::howFarDoIMove()
@@ -533,7 +688,12 @@ void Penelope::addVaccines(int amt)
 	m_vaccines += amt;
 }
 
-void Penelope::classSpecificAction()
+bool Penelope::triggersCitizens()
+{
+	return true;
+}
+
+void Penelope::humanSpecificAction()
 {
 	//check to see if alive
 	double destX = Penelope::getX();
@@ -626,22 +786,98 @@ Citizen::Citizen(double x, double y, StudentWorld * world)
 {
 }
 
-void Citizen::classSpecificAction()
-{
-	return; //for now, do nothing
+void Citizen::humanSpecificAction()
+{  //First find distance of nearest threat (if any) and the player
+	double x_p, y_p, dist_p, x_z, y_z, dist_z;
+	world()->locateNearestCitizenThreat(getX(), getY(), x_z, y_z, dist_z);
+	world()->locatePlayer(getX(), getY(), x_p, y_p, dist_p);
+
+	if ((dist_z == -1 || (dist_p < dist_z)) && dist_p <= 80) //P is close, so citizen will try to move torwards her
+	{
+		if (tryMovingTorwardsPoint(x_p, y_p))
+		{
+			return;
+		}
+	}
+	if (dist_z <= 80 && dist_z >0) //There is a zombie nearby that the citizen wants to move away from
+	{
+		double bestX = 0, bestY = 0, bestDist = 0, newX_z, newY_z, newDist_z;
+		Direction bestDir;
+		if (world()->collision(getX() + 2, getY(), this)) //Check to see if can move in the right direction
+		{
+			world()->locateNearestCitizenThreat(getX() + 2, getY(), newX_z, newY_z, newDist_z);
+			if (newDist_z > bestDist && newDist_z > dist_z)
+			{
+				bestDist = newDist_z, bestX = getX() + 2, bestY = getY();
+				bestDir = right;
+			}	//Check to see if this spot will give a better distance from zombies
+		}
+		if (world()->collision(getX() - 2, getY(), this)) //Check for left
+		{
+			world()->locateNearestCitizenThreat(getX() - 2, getY(), newX_z, newY_z, newDist_z);
+			if (newDist_z > bestDist && newDist_z > dist_z)
+			{
+				bestDist = newDist_z, bestX = getX() - 2, bestY = getY();
+				bestDir = left;
+			}
+		}
+		if (world()->collision(getX(), getY() + 2, this)) //check for up
+		{
+			world()->locateNearestCitizenThreat(getX(), getY() + 2, newX_z, newY_z, newDist_z);
+			if (newDist_z > bestDist && newDist_z > dist_z)
+			{
+				bestDist = newDist_z, bestX = getX(), bestY = getY() + 2;
+				bestDir = up;
+			}
+		}
+		if (world()->collision(getX(), getY() - 2, this)) //check for down
+		{
+			world()->locateNearestCitizenThreat(getX(), getY() - 2, newX_z, newY_z, newDist_z);
+			if (newDist_z > bestDist && newDist_z > dist_z)
+			{
+				bestDist = newDist_z, bestX = getX(), bestY = getY() - 2;
+				bestDir = down;
+			}
+		}
+
+		//After making all checks, if there is a new safer distance, the citizen will move in that direction
+		if (bestDist != 0)
+		{
+			setDirection(bestDir);
+			moveTo(bestX, bestY);
+		}
+	}
+
+
 }
 
 void Citizen::kill()
 {
-	//kill the citizen
+	if (isAlive()) {
+		if (!(getInfect() == 500))
+			world()->playSound(SOUND_CITIZEN_DIE);
+		world()->increaseScore(-1000);
+		die();
+		world()->citizenGone();
+	}
 }
 
 bool Citizen::tryToEscape()
 {
-	world()->increaseScore(500);
-	world()->playSound(SOUND_CITIZEN_SAVED);
-	die();
+	if (isAlive())
+	{
+		world()->increaseScore(500);
+		world()->playSound(SOUND_CITIZEN_SAVED);
+		die();
+		world()->citizenGone();
+	}
 	return true;
+}
+
+void Citizen::tryToInfect()
+{
+	world()->playSound(SOUND_CITIZEN_INFECTED);
+	Human::tryToInfect();
 }
 
 double Citizen::howFarDoIMove()
@@ -660,7 +896,26 @@ Citizen::~Citizen()
 //Zombies
 //////////////////////////////////////////////////////////////////
 
+Zombie::Zombie(double x, double y, StudentWorld* world)
+	:Being(IID_ZOMBIE, x, y, world)
+{
+
+}
 double Zombie::howFarDoIMove()
 {
 	return 1;
+}
+
+bool Zombie::threatensCitizens()
+{
+	return true;
+}
+
+bool Zombie::triggersCitizens()
+{
+	return true;
+}
+
+Zombie::~Zombie()
+{
 }
