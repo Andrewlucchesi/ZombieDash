@@ -587,17 +587,7 @@ bool Human::checkForCriticalInfection()
 		m_infectCount++;
 		if (m_infectCount >= 500)
 		{
-			world()->playSound(SOUND_ZOMBIE_BORN);
 			kill();
-			int chance = randInt(1, 100);
-			if (chance <= 70)
-			{
-				//introduce a dumb zombie
-			}
-			else
-			{
-				//introduce a smart zombie
-			}
 			return true;
 		}
 
@@ -803,7 +793,7 @@ void Citizen::humanSpecificAction()
 	{
 		double bestX = 0, bestY = 0, bestDist = 0, newX_z, newY_z, newDist_z;
 		Direction bestDir;
-		if (world()->collision(getX() + 2, getY(), this)) //Check to see if can move in the right direction
+		if (!(world()->collision(getX() + 2, getY(), this))) //Check to see if can move in the right direction
 		{
 			world()->locateNearestCitizenThreat(getX() + 2, getY(), newX_z, newY_z, newDist_z);
 			if (newDist_z > bestDist && newDist_z > dist_z)
@@ -812,7 +802,7 @@ void Citizen::humanSpecificAction()
 				bestDir = right;
 			}	//Check to see if this spot will give a better distance from zombies
 		}
-		if (world()->collision(getX() - 2, getY(), this)) //Check for left
+		if (!(world()->collision(getX() - 2, getY(), this))) //Check for left
 		{
 			world()->locateNearestCitizenThreat(getX() - 2, getY(), newX_z, newY_z, newDist_z);
 			if (newDist_z > bestDist && newDist_z > dist_z)
@@ -821,7 +811,7 @@ void Citizen::humanSpecificAction()
 				bestDir = left;
 			}
 		}
-		if (world()->collision(getX(), getY() + 2, this)) //check for up
+		if (!(world()->collision(getX(), getY() + 2, this))) //check for up
 		{
 			world()->locateNearestCitizenThreat(getX(), getY() + 2, newX_z, newY_z, newDist_z);
 			if (newDist_z > bestDist && newDist_z > dist_z)
@@ -830,7 +820,7 @@ void Citizen::humanSpecificAction()
 				bestDir = up;
 			}
 		}
-		if (world()->collision(getX(), getY() - 2, this)) //check for down
+		if (!(world()->collision(getX(), getY() - 2, this))) //check for down
 		{
 			world()->locateNearestCitizenThreat(getX(), getY() - 2, newX_z, newY_z, newDist_z);
 			if (newDist_z > bestDist && newDist_z > dist_z)
@@ -849,6 +839,27 @@ void Citizen::humanSpecificAction()
 	}
 
 
+}
+
+bool Citizen::checkForCriticalInfection()
+{
+	if (Human::checkForCriticalInfection())
+	{
+		world()->playSound(SOUND_ZOMBIE_BORN);
+		int chance = randInt(1, 100);
+		if (chance <= 70)
+		{
+			world()->addActor(new DumbZombie(getX(), getY(), world()));
+			//introduce a dumb zombie
+		}
+		else
+		{
+			world()->addActor(new SmartZombie(getX(), getY(), world()));
+			//introduce a smart zombie
+		}
+		return true;
+	}
+	return false;
 }
 
 void Citizen::kill()
@@ -897,7 +908,7 @@ Citizen::~Citizen()
 //////////////////////////////////////////////////////////////////
 
 Zombie::Zombie(double x, double y, StudentWorld* world)
-	:Being(IID_ZOMBIE, x, y, world)
+	:Being(IID_ZOMBIE, x, y, world), m_movementPlanDistance(0)
 {
 
 }
@@ -918,4 +929,226 @@ bool Zombie::triggersCitizens()
 
 Zombie::~Zombie()
 {
+}
+
+void Zombie::setMovementPlanDistance(int amt)
+{
+	m_movementPlanDistance = amt;
+}
+
+void Zombie::decrementMovementPlan()
+{
+	m_movementPlanDistance--;
+}
+
+int Zombie::getMovementPlanDistance()
+{
+	return m_movementPlanDistance;
+}
+
+void Zombie::classSpecificAction()
+{
+	if (isParalyzed())
+		return;
+	
+	//Try to vomit in front of itself
+	int chance = randInt(1, 3);  
+	if (chance == 1) //1/3 chance to be able to vomit
+	{
+		Direction Dir = getDirection();
+	
+
+
+		switch (Dir)
+		{
+		case up:
+			if (world()->isZombieVomitTriggerAt(getX(), getY() + SPRITE_HEIGHT))
+			{
+				world()->addActor(new Vomit(getX(), getY() + SPRITE_HEIGHT, world(), Dir));
+				world()->playSound(SOUND_ZOMBIE_VOMIT);
+				return;
+			}
+			break;
+		case down:
+			if (world()->isZombieVomitTriggerAt(getX(), getY() - SPRITE_HEIGHT))
+			{
+				world()->addActor(new Vomit(getX(), getY() - SPRITE_HEIGHT, world(), Dir));
+				world()->playSound(SOUND_ZOMBIE_VOMIT);
+				return;
+			}
+			break;
+		case right:
+			if (world()->isZombieVomitTriggerAt(getX() + SPRITE_WIDTH, getY()))
+			{
+				world()->addActor(new Vomit(getX() + SPRITE_WIDTH, getY(), world(), Dir));
+					world()->playSound(SOUND_ZOMBIE_VOMIT);
+					return;
+			}
+			break;
+
+		case left:
+			if (world()->isZombieVomitTriggerAt(getX() - SPRITE_WIDTH, getY()))
+			{
+				world()->addActor(new Vomit(getX() - SPRITE_WIDTH, getY(), world(), Dir));
+					world()->playSound(SOUND_ZOMBIE_VOMIT);
+					return;
+			}
+			break;
+
+
+		}
+	}
+
+	//Make vomit check
+
+	zombieSpecificAction();
+}
+
+
+//Dumb Zombies
+DumbZombie::DumbZombie(double x, double y, StudentWorld * world)
+	:Zombie(x, y, world)
+{
+}
+
+DumbZombie::~DumbZombie()
+{
+}
+
+void DumbZombie::kill()
+{
+	if (isAlive())
+	{
+		die();
+		world()->increaseScore(1000);
+		world()->playSound(SOUND_ZOMBIE_DIE);
+		
+		if (randInt(1, 10) == 7) //if penelope is lucky lucky rubber ducky, dumb zombie drops a vaccine
+		{
+			Direction dir = randInt(0, 3) * 90;
+			switch (dir)
+			{
+			case up:
+				if (world()->anyOverlaps(getX(), getY() + SPRITE_HEIGHT))
+					world()->addActor(new VaccineGoodie(getX(), getY() + SPRITE_HEIGHT, world()));
+				break;
+			case down:
+				if (world()->anyOverlaps(getX(), getY() - SPRITE_HEIGHT))
+					world()->addActor(new VaccineGoodie(getX(), getY() - SPRITE_HEIGHT, world()));
+				break;
+			case left:
+				if (world()->anyOverlaps(getX() - SPRITE_WIDTH, getY()))
+					world()->addActor(new VaccineGoodie(getX() - SPRITE_WIDTH, getY(), world()));
+				break;
+			case right:
+				if (world()->anyOverlaps(getX() + SPRITE_WIDTH, getY()))
+					world()->addActor(new VaccineGoodie(getX() - SPRITE_WIDTH, getY(), world()));
+				break;
+			}
+		}
+	}
+}
+
+void DumbZombie::zombieSpecificAction()
+{
+	//Dumb zombie will check to see if it needs to make a new movement plan
+	if (getMovementPlanDistance() <= 0)
+	{
+		setMovementPlanDistance(randInt(3, 10));
+		setDirection(randInt(0, 3) * 90);
+	}
+	if (tryMoving(getDirection()))
+	{
+		decrementMovementPlan();
+	}
+	else
+	{
+		setMovementPlanDistance(0);
+	}
+
+}
+
+
+
+
+//Smart Zombies
+SmartZombie::SmartZombie(double x, double y, StudentWorld * world)
+	:Zombie(x, y, world)
+{
+}
+
+SmartZombie::~SmartZombie()
+{
+}
+
+void SmartZombie::kill()
+{
+	if (isAlive())
+	{
+		kill();
+		world()->increaseScore(2000);
+		world()->playSound(SOUND_ZOMBIE_DIE);
+	}
+}
+
+void SmartZombie::zombieSpecificAction()
+{
+	double bestx, besty, bestdist;
+
+	//if a new movement plan is needed, make one
+	if (getMovementPlanDistance() <= 0)
+	{
+		setMovementPlanDistance(randInt(3, 10));
+		world()->locateNearestVomitTrigger(getX(), getY(), bestx, besty, bestdist); //CHecks to see if a human is nearby
+		if (bestdist > 80)
+		{
+			setDirection(randInt(0, 3) * 90);
+		}
+		else if (bestdist <= 80)
+		{
+			double deltaX = bestx - getX(), deltaY = besty - getY();
+			if (deltaX == 0)
+			{
+				if (deltaY > 0)
+					setDirection(up);
+				else if (deltaY < 0)
+					setDirection(down);
+			}
+			else if (deltaY == 0)
+			{
+				if (deltaX > 0)
+					setDirection(right);
+				else if (deltaY < 0)
+					setDirection(left);
+			}
+			else
+			{
+				int chance = randInt(0, 1); //0 is vertical, 1 is horizantal
+				if (chance == 0)
+				{
+					if (deltaY > 0)
+						setDirection(up);
+					else if (deltaY < 0)
+						setDirection(down);
+				}
+				else if (chance == 1)
+				{
+					if (deltaX > 0)
+						setDirection(right);
+					else if (deltaX < 0)
+						setDirection(left);
+				}
+			}
+
+
+		}
+	}
+
+
+	if (!tryMoving(getDirection()))
+	{
+		setMovementPlanDistance(0);
+	}
+	else decrementMovementPlan();
+
 }

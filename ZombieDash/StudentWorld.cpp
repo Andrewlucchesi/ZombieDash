@@ -119,6 +119,15 @@ int StudentWorld::init()
 				m_citizenCount++;
 				m_actors.push_back(entry);
 				break;
+
+			case Level::dumb_zombie:
+				entry = new DumbZombie(x*SPRITE_WIDTH, y*SPRITE_HEIGHT, this);
+				m_actors.push_back(entry);
+				break;
+			case Level::smart_zombie:
+				entry = new SmartZombie(x*SPRITE_WIDTH, y*SPRITE_HEIGHT, this);
+				m_actors.push_back(entry);
+				break;
 			}
 		}
 	}
@@ -231,17 +240,43 @@ void StudentWorld::levelFinished()
 
 bool StudentWorld::isZombieVomitTriggerAt(double x, double y)
 {
-	bool result = false;
 	list<Actor*> ::iterator It;
 	for (It = m_actors.begin(); It != m_actors.end(); It++)
 	{
 		if ((*It)->isOverlapping(x, y) && (*It)->triggersZombieVomit())
 		{
-			result = true;
-			break;
+			return true;
 		}
 	}
-	return result;
+	if (m_player->isOverlapping(x, y) && m_player->triggersZombieVomit())
+	{
+		return true;
+	}
+	return false;
+
+}
+
+bool StudentWorld::locateNearestVomitTrigger(double x, double y, double & otherX, double & otherY, double & distance)
+{
+	distance = -1;
+	list<Actor*> ::iterator It;
+	for (It = m_actors.begin(); It != m_actors.end(); It++)
+	{
+		if ((*It)->triggersZombieVomit())
+		{
+			double tempDist = calculateDistance(x, y, (*It)->getX(), (*It)->getY());
+			if (distance == -1 || tempDist < distance)
+			{
+				distance = tempDist;
+				otherX = (*It)->getX();
+				otherY = (*It)->getY();
+			}
+		}
+	}
+	if (distance == -1)
+		return false;
+	else
+		return true;
 }
 
 void StudentWorld::overlaps(StaticActor* checker) //Looks to see if there are any overlaps at the given coordinate point
@@ -260,6 +295,24 @@ void StudentWorld::overlaps(StaticActor* checker) //Looks to see if there are an
 		checker->doThisThingWhileOverlappingPlayer(m_player);
 	}
 
+}
+
+bool StudentWorld::anyOverlaps(double x, double y)
+{
+	bool result = false;
+	list<Actor*> ::iterator It;
+	for (It = m_actors.begin(); It != m_actors.end(); It++)
+	{
+		if ((*It)->isOverlapping(x, y)) //Individually checking each actor for coordinates overlapping with the coordinates
+		{
+			result = true;
+		} 
+	}
+	if (m_player->isOverlapping(x, y))
+	{
+		result = true;
+	}
+	return result;
 }
 
 void StudentWorld::cleanUp()

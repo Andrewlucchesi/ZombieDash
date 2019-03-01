@@ -20,6 +20,7 @@ public:
      int move();
     void cleanUp();
 	void overlaps(StaticActor* checker);
+	bool anyOverlaps(double x, double y);
 	bool collision(double x, double y, Actor* Caller);
 	void citizenGone();
 	bool noCitizens(); //true if there are no citizens
@@ -32,7 +33,7 @@ public:
 	// Return true if there is a living human, otherwise false.  If true,
 	// otherX, otherY, and distance will be set to the location and distance
 	// of the human nearest to (x,y).
-	///bool locateNearestVomitTrigger(double x, double y, double& otherX, double& otherY, double& distance);
+	bool locateNearestVomitTrigger(double x, double y, double& otherX, double& otherY, double& distance);
 
 	// Return true if there is a living zombie, false otherwise.  If true,
 	// otherX, otherY and distance will be set to the location and distance

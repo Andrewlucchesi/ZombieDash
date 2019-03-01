@@ -28,7 +28,7 @@ public:
 	// Can this object cause a zombie to vomit?
 	virtual bool triggersZombieVomit();
 
-	// Is this object a threat to citizens?
+	// Is this object a threat to citizens?b 
 	virtual bool threatensCitizens();
 
 	// Does this object trigger citizens to follow it or flee it?
@@ -208,7 +208,8 @@ public:
 
 protected:
 	void cure();
-	bool checkForCriticalInfection(); //Checks to see if an infection will turn the human into a zombie
+	virtual bool checkForCriticalInfection(); //Checks to see if an infection will turn the human into a zombie
+
 private:
 	int m_infectCount;
 	bool m_isInfected;
@@ -255,6 +256,7 @@ virtual	~Citizen();
 
 protected:
 	virtual void kill();
+	virtual bool checkForCriticalInfection();
 private:
 	virtual void humanSpecificAction();
 
@@ -268,22 +270,34 @@ public:
 	virtual bool threatensCitizens();
 	virtual bool triggersCitizens();
 	virtual ~Zombie();
+protected:
+	void setMovementPlanDistance(int amt);
+	void decrementMovementPlan();
+	int getMovementPlanDistance();
 private:
-	//virtual void classSpecificAction();
+	int m_movementPlanDistance;
+	virtual void classSpecificAction();
+	virtual void zombieSpecificAction() = 0;
 };
 
 class DumbZombie : public Zombie
 {
 public:
+	DumbZombie(double x, double y, StudentWorld* world);
+	virtual ~DumbZombie();
 private:
-	//virtual void kill();
+	virtual void kill();
+	virtual void zombieSpecificAction();
 };
 
 class SmartZombie : public Zombie
 {
 public:
+	SmartZombie(double x, double y, StudentWorld* world);
+	virtual ~SmartZombie();
 private:
-	//virtual void kill();
+	virtual void kill();
+	virtual void zombieSpecificAction();
 };
 
 #endif // ACTOR_H_
